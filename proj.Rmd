@@ -1,17 +1,231 @@
 
+---
+title: Used Car Price Prediction
+output:
+  prettydoc::html_pretty:
+    theme: leonids
+---
 
-##  
+# 
 
-##  
+### **Introduction**
 
-##  
+This project focuses on **predicting used car prices** by utilizing machine learning algorithms. It is important to understand how the used car prices are being influenced by various features as the market has changed dramatically.
 
-## Used Car Price Prediction
+- **Tools:** Python / R
+- **Dataset:** CarGurus (IL/IA/WI/MI/IN)
+- **Analyses performed:** Linear/Polynomial regression, Random Forest, KNN
 
-### **Project Summary**
+#  
 
-- This project focuses on predicting used car prices by utilizing machine learning algorithms. Our group thought that it is important to understand how the used
-car prices are being influenced by various features as the market has changed dramatically. Such change can be attributed to decreased production by manufacturers caused by insufficient supply of microchips and an increase in demand of cars from consumers returning to work. Another reason as to why we
-decided to apply machine algorithm to this analysis is stems from the effect that COVID 19 has had on the market. Fluctuation in used car prices may be explained by cyclical/seasonal fluctuations that can be explained through time-series analysis. In reality, COVID 19 has caused dramatic changes in the market that have made previous fluctuations hard to use as a benchmark of analysis. The dataset that has been used consists of over 30,000 observations with a total of 29 features. After utilizing data management concepts for cleansing and scaling, methods for analysis were taken into consideration. Out of the candidates, Linear Regression, Polynomial Regression, Random Forest, and K-Nearest Neighbors(KNN) has been utilized in the analysis. Acquiring the results of the analysis, each model has been evaluated based on their performance and ranked. Also, some of the limitation such as accounting for NULL values, correlation among features, and scaling method for the KNN has been covered as well as other fields in which these models may be applied. As a result, this project has been able to show that the Random Forest model has had the best performance level followed by Polynomial Regression, KNN, and Linear Regression. Stemming from best performing model(Random Forest) this project has extracted the feature importance showing that the features of Model ID, Year Old, Mileage, and Brand covered 91.72% of the total feature importance.
+---
 
+### **Data Description and Exploratory Data Analysis**
+
+The data utilized in this project has been collected from the CarGurus website through web-scraping. The selection of our data source has been made on the fact that CarGurus is known to use advanced algorithms to assess the value of any vehicle, making it highly likely that their prices will reflect the features that exist. 
+
+This project has limited the origin of the used car data to be from some of the Mid-western states such as that of **Illinois, Iowa, Wisconsin, Missouri, and Indiana.** To get samples from these states, all the zip codes available within the target states were collected which was 4588 zip codes in total. Afterwards, we randomized the zip codes to keep our analysis from being biased and selected 3000 of those zip codes for the sake of computational efficiency. 
+
+As a result the data gathered consists of **32,785 observations with 28 features** which includes key features such as MSRP, year old, model name, and many others.
+
+```{r,echo=F}
+results = data.frame(
+  "Coefficient of Determination" = c("78.51%","83.31%","89.24%","81.83%"),
+  "MSE" = c("49,588,734","46,202,202","29,780,137","51,542,118"),
+  "MAE" = c("4154.19","3443.15","2724.70","3843.28"),
+  row.names = c("Linear Regression", "Polynomial Regression","Random Forest","KNN")
+)
+```
+
+```{r}
+knitr::kable(results,caption='Project summary')
+```
+
+
+```{r,echo=F,message=F}
+library(openxlsx)
+library(dplyr)
+library(psych)
+library(knitr)
+library(ggcorrplot)
+car_unclean = read.csv("used car cargus.csv")
+price = data.frame(car_unclean$Price)
+car_unclean=car_unclean[,-c(1,8)]
+car_unclean = cbind(price,car_unclean)
+```
+
+- To investigation for high correlation among features found that there was a very high correlation among features 'Apple CarPlay' and 'AndroidAuto'.
+
+```{r fig.pos = "center",echo=F,message=F, out.width= '85%'}
+car_unclean_corr = car_unclean[,-c(1,2,3,4,5,6,8,9,10)]
+corr_simple <- function(data,sig=0.5){
+  #run a correlation and drop the insignificant ones
+  corr <- cor(data,use="complete.obs")
+  #prepare to drop duplicates and correlations of 1     
+  corr[lower.tri(corr,diag=TRUE)] <- NA 
+  #drop perfect correlations
+  corr[corr == 1] <- NA 
+  #turn into a 3-column table
+  corr <- as.data.frame(as.table(corr))
+  #remove the NA values from above 
+  corr <- na.omit(corr) 
+  #select significant values  
+  corr <- subset(corr, abs(Freq) > sig) 
+  #sort by highest correlation
+  corr <- corr[order(-abs(corr$Freq)),] 
+  #turn corr back into matrix in order to plot with corrplot
+  mtx_corr <- reshape2::acast(corr, Var1~Var2, value.var="Freq")
+  #plot correlations visually
+  ggcorrplot(mtx_corr,
+           lab = TRUE)
+  
+}
+
+corr_simple(car_unclean_corr)
+
+
+```
+
+
+- After recognizing high correlation between AndroidAuto and CarPlay, there was need to check Variance Inflation Factor(VIF) to adjust our subset of variables to be used in the analysis. To compare the VIF in a broader scale among the variables, we calculated the VIF for the two set of highly correlated variables, which added the pair of YearOld and Mileage. As a result we were able to find that Carplay and AndroidAuto had VIF over 10 whereas the pair with the second largest correlation had VIF less than 10. Setting our threshold of VIF as 10, there was need to make adjustment to CarPlay and AndroidAuto due to multicollinearity.
+- Despite the VIF of CarPlay being larger, we still chose to keep CarPlay in our analysis and drop AndroidAuto. This decision was based on the research on market share that cellphone manufacturers have in the United States. Apple had over 50% market share which made it more realistic to use CarPlay over AndroidAuto. 
+
+```{r,echo=F, tidy=TRUE}
+vif = data.frame(
+  "Variables" = c("CarPlay","Android Auto","YearOld","mileage"),
+  "PriorVIF" = c("12.465760","12.215435","6.697340","6.702101"),
+  "PosteriorVIF" = c("1.184677","--","6.690461","6.9698865")
+)
+```
+
+```{r}
+knitr::kable(vif,caption='Variance Inflation Factor')
+```
+
+
+- Relationship between the price and features Mileage, YearOld, AccidentCount, and OwnerCount all showed a negative relationship.
+
+```{r,echo=F}
+colnames(car_unclean)[1] <- "Price"
+mileage_fit = lm(Price~mileage,data=car_unclean)
+YearOld_fit = lm(Price~YearOld,data=car_unclean)
+AccidentCount_fit = lm(Price~AccidentCount,data=car_unclean)
+OwnerCount_fit = lm(Price~OwnerCount,data=car_unclean)
+
+
+par(mfrow=c(2,2))
+par(mar=c(1,1,1,1))
+plot(y=car_unclean$Price,x=car_unclean$mileage,col='orange',main = "Price VS Mileage",ylab = 'Price', pch=15,xlab=" ",xaxt='n')
+abline(mileage_fit,col='darkblue')
+legend("topright", legend='Slope = -0.1993',
+       col='darkblue', lty=1, cex=0.8)
+
+plot(y=car_unclean$Price,x=car_unclean$YearOld,col='orange',main = "Price VS YearOld",ylab = 'Price', pch=15,xlab=" ",xaxt='n')
+abline(YearOld_fit,col='darkblue')
+legend("topright", legend='Slope = -3209',
+       col='darkblue', lty=1, cex=0.8)
+
+plot(y=car_unclean$Price,x=car_unclean$AccidentCount,col='orange',main = "Price VS AccidentCount",ylab = 'Price',pch=15,xlab=" ",xaxt='n')
+abline(AccidentCount_fit,col='darkblue')
+legend("topright", legend='Slope = -5597',
+       col='darkblue', lty=1, cex=0.8)
+
+plot(y=car_unclean$Price,x=car_unclean$OwnerCount,col='orange',main = "Price VS OwnerCount",ylab = 'Price',pch=15,xlab=" ",xaxt='n')
+abline(OwnerCount_fit,col='darkblue')
+legend("topright", legend='Slope = -4891',
+       col='darkblue', lty=1, cex=0.8)
+```
+
+\newpage
+- The intuition that had been developed from the start of this project had been the notion that the feature MSRP would be of great importance in estimating Price. However, our analysis showed that MSRP had many NULL values which required adjustment. With 72.28% of observation missing within the data for the feature MSRP, we found that it would be unrealistic to replace those missing observations with other possible choices, leading to the decision to exclude the feature MSRP in the analysis. The possible ways that could have been utilized to overcome this problem will be discussed in later part of this report. The same problem appeared but at a lesser extreme in other features such as that of Transmission, Body Type, Accident Count, Fuel Type, and Owner Count. As each of these variables will be of importance in deciding the price of used cars, we have relied to omitting these values. As a result a total of 1,770 observations were removed to leave 31,015 observations to be used in the analysis.
+
+```{r,echo=F}
+library(visdat)
+vis_miss(car_unclean,warn_large_dat=F)
+```
+
+- Analysis on the Brand feature revealed that the most number of brands within the dataset was that of Ford and Chevrolet, while the highest priced Brand were Lamborghini and Ferrari.
+
+- After basic observation of our data, we preceded to perform encoding the categorical features. The two choices of encoding possible, one-hot encoding and target encoding, were considered for all categorical variables and based on the number of different factors possible, we have set the threshold at 17 additional columns to be acceptable to keep the total number of columns below 45 for the sake of computational efficiency. As a result, one-hot encoding was implemented to features Transmission and FuelType, while target encoding was implemented to Brand, ModelID, Color, and BodyType.
+
+\newpage
+## Section 4: Methodology
+
+- The ML algorithm considered for application in this project has been restricted to those of Linear Regression, Polynomial Regression, Random Forest, and K-Nearest Neighbor. These algorithms have been selected on the characteristic that they have that can be distinguishable characteristic against others.
+- Linear Regression has been chosen as it is the most fundamental and essential regression possible, making it crucial approach that should be considered in many data. It is also capable of analyzing the linearity of the data that can be overlooked by other approaches.
+- Polynomial Regression was selected to account the characteristic of our data. Our data can not be considered completely linear which hence, the prediction accuracy could be increased by applying polynomial regression. However, there is a change that over fitting will occur and requires careful attention through out our analysis.
+- Random Forest was selected to with respect to numerous feature that our data has. Random forest is able to account for numerous features while ensuring that the each final nodes will be uncorrelated. 
+- K-Nearest Neighbor was selected so that we could apply supervised machine learning algorithm to our analysis. The KNN can be applied to solve both classification and regression problems. In our analysis, we applied the KNN algorithm for regression.
+  - For the KNN we found that just using encoding method would reduce the accuracy of our model. Therefore, we scaled the data. In the methods of scaling to be used in KNN analysis, we implemented 3 possible methods.
+    - The min-max method which uses minimum and maximum values of a feature to re scale values
+    - The standard method of scaling features to be approximately standard normally distributed. 
+    -  The robust scaling method which can overcome outliers within the data. This is acquired by using the first and third quartile values in the scaling process.
+  - Among these methods three choices, we found that robust scaling method returned the highest $R^2$ score. 
+  
+```{r}
+knn = data.frame(
+  "Method" = c("Before Scaling","Min-Max scaling","Standard Scaling","Robust Scaling"),
+  "R squared" = c("77.62%","63.56%","76.14%","81.38%")
+)
+```
+
+```{r}
+knitr::kable(knn,caption='KNN Scaling')
+```
+
+
+
+## Section 5 : Analysis results
+
+- Through our analysis, we have had to find the appropriate tuning parameters to be used within some of our selected models. Such tuning parameters will be explained in the corresponding description of algorithms.
+
+- For the linear regression, our analysis returned the $R^2$ score of 0.7851 which is 78.51% of accuracy. For the polynomial regression $R^2$ was 0.8331, 83.31% accuracy.
+
+- In the random forest algorithm, we had to perform a randomized grid search to find the appropriate number of estimator and the minimum number of samples required to split an internal node. We focused our selection based on $R^2$ that could be acquired as our main goal was to compare against other algorithms. As a result we were able to get a combination of 300 estimators and split to be at 4. The final result that we acquire was $R^2$ of 0.8924, 89.24%.
+
+```{r,echo=F,message=F}
+knitr::kable(results ,caption='Project summary')
+```
+
+
+- In the KNN algorithm, we simulated to find what number of neighbors would return a lower MSE. The best K that we obtained was 8. The overall fluctuation in MSE that occurs with the change in the number of neighbors is show in the elbow plot below.
+
+```{r fig.align='center',out.width='50%'}
+knitr::include_graphics(path = "elbow.png")
+```
+
+- The following plot shows how close the predicted prices were compared to the actual prices
+
+```{r fig.align='center',out.width='90%'}
+#prediction and actual
+knitr::include_graphics(path = "result_4table.png")
+```
+
+- The effective algorithm for our dataset was random forest. So to investigate how much each feature was contributing to our prediction, we calculated the feature importance. As shown below, ModelID, YearOld, mileage, and Brand consisted over 90% of the feature importance. The obtained result shows that used car buyers should focus on these top four features.
+
+```{r fig.align='center',out.width='100%'}
+#prediction and actual
+knitr::include_graphics(path = "featureimpt.jpeg")
+```
+
+
+## Section 6 : Discussion
+
+- The existence of NULL values in our data has caused much nuisance. Especially for the feature MSRP as we initially thought that MSRP would be a key factor in price prediction. Without additional information regarding MSRP, we could not replace these NULL values with others as it would lead to tampering with data. Therefore, we believe that if we were able to find a way to gather MSRP information through past dataset and merge it with the dataset that we used, it would likely improve our prediction.
+
+- The model that has been used in the analysis of this dataset has aspects in which it can be implemented to other relevant data. Having found that the feature importance is concentrated on ModelID, YearOld, Mileage, and Brand, the same feature importance can be found in used airplane market as well. With the emergence of lower priced airline that operates using second-hand airplanes, this model may be helpful in predicting the future price for second-hand airplane buyers.
+
+- This project has only utilized four of numerous possible algorithms that could have been implemented. Despite our selection of these are based on their characteristics and may reflect how others may perform as well, performance of other algorithms cannot be determined beforehand. Other algorithms such as that of XGBoost have been found to show great performance in other works that have been used in our reference. Therefore comparison using those models may lead to better discovery of better prediction levels.
+
+\newpage
+## Reference
+1. Chuancan Chen, Lulu Hao, and Cong Xu , *"Comparative analysis of used car price evaluation models"*, AIP Conference Proceedings 1839, 020165, 2017
+
+2. Xinyuan Zhang, Zhiye Zhang, and Changtong Qiu, *“Model of Predicting the Price Range of Used Car”*, 2017
+
+3. Nabarun Pal, Priya Arora, Sai Sumanth Palakurthy, Dhanasekar Sundararaman, Puneet Kohli, *"How much is my car worth? A methodology for predicting used cars prices using Random Forest"*, Future of Information and Communications Conference (FICC), 2018
+
+4. Pattabiraman Venkatasubbu, Mukkesh Ganesh, *"Used Cars Price Prediction using Supervised Learning Techniques"*, International Journal of Engineering and Advanced Technology (IJEAT), 2019
+
+5. Kshitij Kumbar, Pranav Gadre, Varun Nayak, *"CS 229 Project Report: Predicting Used Car Prices"*, 2019
 
