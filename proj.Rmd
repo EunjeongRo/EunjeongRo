@@ -1,0 +1,17 @@
+
+
+##  
+
+##  
+
+##  
+
+## Used Car Price Prediction
+
+### **Project Summary**
+
+- This project focuses on predicting used car prices by utilizing machine learning algorithms. Our group thought that it is important to understand how the used
+car prices are being influenced by various features as the market has changed dramatically. Such change can be attributed to decreased production by manufacturers caused by insufficient supply of microchips and an increase in demand of cars from consumers returning to work. Another reason as to why we
+decided to apply machine algorithm to this analysis is stems from the effect that COVID 19 has had on the market. Fluctuation in used car prices may be explained by cyclical/seasonal fluctuations that can be explained through time-series analysis. In reality, COVID 19 has caused dramatic changes in the market that have made previous fluctuations hard to use as a benchmark of analysis. The dataset that has been used consists of over 30,000 observations with a total of 29 features. After utilizing data management concepts for cleansing and scaling, methods for analysis were taken into consideration. Out of the candidates, Linear Regression, Polynomial Regression, Random Forest, and K-Nearest Neighbors(KNN) has been utilized in the analysis. Acquiring the results of the analysis, each model has been evaluated based on their performance and ranked. Also, some of the limitation such as accounting for NULL values, correlation among features, and scaling method for the KNN has been covered as well as other fields in which these models may be applied. As a result, this project has been able to show that the Random Forest model has had the best performance level followed by Polynomial Regression, KNN, and Linear Regression. Stemming from best performing model(Random Forest) this project has extracted the feature importance showing that the features of Model ID, Year Old, Mileage, and Brand covered 91.72% of the total feature importance.
+
+
