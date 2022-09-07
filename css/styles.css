@@ -236,8 +236,8 @@ sup {
 }
 
 a {
-  color: #ffc800;
-  text-decoration: underline;
+  color: #000000;
+  text-decoration: none;
 }
 a:hover {
   color: #cca000;
@@ -4804,7 +4804,7 @@ textarea.form-control-lg {
 .page-link {
   position: relative;
   display: block;
-  color: #000000;
+  color: #ffc800;
   text-decoration: none;
   background-color: #fff;
   border: 1px solid #dee2e6;
