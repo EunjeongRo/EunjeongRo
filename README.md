@@ -1,6 +1,6 @@
 - 👋 Hi, I’m @EunjeongRo 🌿
-- 📊 I’m interested in data analysis, coding, mathematics, and making videos!
-- 🌱 I’m currently learning an Actuarial Science at UIUC graduate school :)
+- 📊 I’m interested in data analysis, coding, mathematics, and making films
+- 🌱 Completed MS in Actuarial Science at UIUC
 - 💌 How to reach me ... [Youtube Channel](https://www.youtube.com/channel/UCtfnHliex_uPVTY1t2YQ4HA), [Instagram](https://www.instagram.com/r_eunj/)
 
 <!---
